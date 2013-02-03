@@ -4,26 +4,25 @@
  */
 package org.thebes;
 
-import java.io.FileInputStream;
+import java.io.FileInputStream; 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.thebes.net.SessionManager;
 import org.thebes.net.rqt.RequestDispatcher;
 import org.thebes.net.sql.Database;
 import org.thebes.util.Constants;
-import org.thebes.util.logging.Logger;
 
 /**
  *
@@ -34,7 +33,10 @@ public class Server implements Runnable {
     public static Database database = new Database();
     public static RequestDispatcher dispatcher = new RequestDispatcher();
     public static ExecutorService threadPool = Executors.newCachedThreadPool();
-    public static boolean running = true;
+    
+    private static final Logger logger = Logger.getLogger("Server");
+    
+    public static boolean running = true;  
      
     public void bind() throws IOException {
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open(); 
@@ -42,6 +44,7 @@ public class Server implements Runnable {
                 InetAddress.getLocalHost(), Constants.LISTENER_PORT);
         serverSocketChannel.configureBlocking(false);
         serverSocketChannel.socket().bind(isa);
+        logger.log(Level.INFO, "Server started on 0.0.0.0:" + Constants.LISTENER_PORT);
     }
     
     public void connectToDatabase() throws Exception {
@@ -60,13 +63,14 @@ public class Server implements Runnable {
     public void run() {
         try { 
             Selector selector = SelectorProvider.provider().openSelector();
-            while(selector.select() > 0 && isRunning()) { 
+            while(selector.isOpen() && isRunning()) {
                 Set readyKeys = selector.selectedKeys(); 
                 for(Iterator<SelectionKey> i = readyKeys.iterator(); i.hasNext();) {
                     SelectionKey key = i.next(); 
                     ServerSocketChannel channel = 
                         (ServerSocketChannel)key.channel();  
                     SessionManager.open(channel.accept());
+                    System.out.println("accepted");
                     i.remove();
                 } 
             }
